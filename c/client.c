@@ -5,14 +5,16 @@
 #include <unistd.h>
 
 int main() {
+    const char* hostname = "localhost";
+    const int port = 50007;
     int socketfd = socket(AF_INET, SOCK_STREAM, 0);
-    struct hostent* server = gethostbyname("nuc");
+    struct hostent* server = gethostbyname(hostname);
 
     struct sockaddr_in server_addr;
     bzero((char*)&server_addr, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     bcopy((char*)server->h_addr_list[0], (char*)&server_addr.sin_addr.s_addr, server->h_length);
-    server_addr.sin_port = htons(50007);
+    server_addr.sin_port = htons(port);
     server_addr.sin_len = sizeof(server_addr);
 
     sa_endpoints_t endpoints;
