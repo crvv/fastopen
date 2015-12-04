@@ -41,7 +41,7 @@ static PyMethodDef methods[] = {
     {"connect", fastopen_connect, METH_VARARGS, "connect TCP with fastopen enabled"},
     {NULL, NULL, 0, NULL}
 };
-
+#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef fastopenmodule = {
     PyModuleDef_HEAD_INIT,
     "fastopen",
@@ -49,7 +49,14 @@ static struct PyModuleDef fastopenmodule = {
     -1,
     methods
 };
-
-PyMODINIT_FUNC PyInit_fastopen(void) {
+PyMODINIT_FUNC PyInit_fastopen(void)
+#else
+void initfastopen(void)
+#endif
+{
+#if PY_MAJOR_VERSION >= 3
     return PyModule_Create(&fastopenmodule);
+#else
+    Py_InitModule("fastopen", methods);
+#endif
 }
