@@ -3,30 +3,23 @@
 #include <stdio.h>
 #include <netdb.h>
 #include <strings.h>
-#include <unistd.h>
+#include <stdlib.h>
 
 static PyObject* fastopen_connect(PyObject* self, PyObject* args) {
     int socketfd;
-	const char* hostname;
-	int port;
-
-	if (!PyArg_ParseTuple(args, "isi", &socketfd, &hostname, &port)) {
+    const char* hostname;
+    const char* port;
+    struct addrinfo *server;
+	if (!PyArg_ParseTuple(args, "iss", &socketfd, &hostname, &port)) {
 		return NULL;
 	}
-
-    struct hostent* server = gethostbyname(hostname);
-
-    struct sockaddr_in server_addr;
-    bzero((char*)&server_addr, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    bcopy((char*)server->h_addr_list[0], (char*)&server_addr.sin_addr.s_addr, server->h_length);
-    server_addr.sin_port = htons(port);
-    server_addr.sin_len = sizeof(server_addr);
-
+    
+    getaddrinfo(hostname, port, 0, &server);
+    
     sa_endpoints_t endpoints;
     bzero((char*)&endpoints, sizeof(endpoints));
-    endpoints.sae_dstaddr = (struct sockaddr*)&server_addr;
-    endpoints.sae_dstaddrlen = sizeof(server_addr);
+    endpoints.sae_dstaddr = server->ai_addr;
+    endpoints.sae_dstaddrlen = server->ai_addrlen;
 
     int rc = connectx(socketfd,
             &endpoints,
@@ -34,6 +27,7 @@ static PyObject* fastopen_connect(PyObject* self, PyObject* args) {
             CONNECT_RESUME_ON_READ_WRITE | CONNECT_DATA_IDEMPOTENT,
             NULL, 0, NULL, NULL);
 
+    freeaddrinfo(server);
     return PyLong_FromLong(rc);
 }
 
