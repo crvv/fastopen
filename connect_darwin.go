@@ -49,6 +49,7 @@ import (
 	"golang.org/x/sys/unix"
 	"net"
 	"time"
+	"io"
 )
 
 type conn struct {
@@ -57,6 +58,9 @@ type conn struct {
 
 func (c conn) Read(b []byte) (n int, err error) {
 	n, err = unix.Read(c.fd, b)
+	if n == 0 && err == nil {
+		err = io.EOF
+	}
 	return
 }
 func (c conn) Write(b []byte) (n int, err error) {
@@ -80,14 +84,25 @@ func (c conn) RemoteAddr() net.Addr {
 	}
 	return sockaddr2tcpaddr(sa)
 }
-func (c conn) SetDeadline(t time.Time) error {
-	panic(NotSupport)
+func (c conn) SetDeadline(t time.Time) (err error) {
+	err = c.SetReadDeadline(t)
+	if err != nil {
+		return
+	}
+	err = c.SetWriteDeadline(t)
+	return
 }
 func (c conn) SetReadDeadline(t time.Time) error {
-	panic(NotSupport)
+	return unix.SetsockoptTimeval(c.fd, unix.SOL_SOCKET, unix.SO_RCVTIMEO, getTimeval(t))
 }
 func (c conn) SetWriteDeadline(t time.Time) error {
-	panic(NotSupport)
+	return unix.SetsockoptTimeval(c.fd, unix.SOL_SOCKET, unix.SO_SNDTIMEO, getTimeval(t))
+}
+
+func getTimeval(t time.Time) *unix.Timeval {
+	nsec := int64(t.Sub(time.Now()))
+	timeval := unix.NsecToTimeval(nsec)
+	return &timeval
 }
 
 func sockaddr2tcpaddr(addr unix.Sockaddr) (tcpaddr *net.TCPAddr) {
