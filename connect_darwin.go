@@ -106,6 +106,7 @@ func getTimeval(t time.Time) *unix.Timeval {
 }
 
 func sockaddr2tcpaddr(addr unix.Sockaddr) (tcpaddr *net.TCPAddr) {
+	tcpaddr = &net.TCPAddr{}
 	switch a := addr.(type) {
 	case *unix.SockaddrInet4:
 		tcpaddr.Port = a.Port
