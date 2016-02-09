@@ -47,9 +47,9 @@ import "C"
 import (
 	"fmt"
 	"golang.org/x/sys/unix"
+	"io"
 	"net"
 	"time"
-	"io"
 )
 
 type conn struct {
@@ -61,14 +61,24 @@ func (c conn) Read(b []byte) (n int, err error) {
 	if n == 0 && err == nil {
 		err = io.EOF
 	}
+	if err != nil {
+		err = Err{err}
+	}
 	return
 }
 func (c conn) Write(b []byte) (n int, err error) {
 	n, err = unix.Write(c.fd, b)
+	if err != nil {
+		err = Err{err}
+	}
 	return
 }
-func (c conn) Close() error {
-	return unix.Close(c.fd)
+func (c conn) Close() (err error) {
+	err = unix.Close(c.fd)
+	if err != nil {
+		err = Err{err}
+	}
+	return
 }
 func (c conn) LocalAddr() net.Addr {
 	sa, err := unix.Getsockname(c.fd)
@@ -87,16 +97,27 @@ func (c conn) RemoteAddr() net.Addr {
 func (c conn) SetDeadline(t time.Time) (err error) {
 	err = c.SetReadDeadline(t)
 	if err != nil {
-		return
+		return Err{err}
 	}
 	err = c.SetWriteDeadline(t)
+	if err != nil {
+		err = Err{err}
+	}
 	return
 }
-func (c conn) SetReadDeadline(t time.Time) error {
-	return unix.SetsockoptTimeval(c.fd, unix.SOL_SOCKET, unix.SO_RCVTIMEO, getTimeval(t))
+func (c conn) SetReadDeadline(t time.Time) (err error) {
+	err = unix.SetsockoptTimeval(c.fd, unix.SOL_SOCKET, unix.SO_RCVTIMEO, getTimeval(t))
+	if err != nil {
+		err = Err{err}
+	}
+	return
 }
-func (c conn) SetWriteDeadline(t time.Time) error {
-	return unix.SetsockoptTimeval(c.fd, unix.SOL_SOCKET, unix.SO_SNDTIMEO, getTimeval(t))
+func (c conn) SetWriteDeadline(t time.Time) (err error) {
+	err = unix.SetsockoptTimeval(c.fd, unix.SOL_SOCKET, unix.SO_SNDTIMEO, getTimeval(t))
+	if err != nil {
+		err = Err{err}
+	}
+	return
 }
 
 func getTimeval(t time.Time) *unix.Timeval {
